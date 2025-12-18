@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>arfztrk_trade technical score</title>
+    <style>
+        /* --- GENEL TASARIM --- */
+        :root {
+            --bg-primary: #0b0e11; 
+            --bg-secondary: #131722; 
+            --text-color: #e0e3eb;
+            --border-color: #2a2e39; 
+            --neon-color: #00ffff; /* SAF TURKUAZ */
+            --accent-color: #2962ff;
+            --success-color: #22c55e;
+            --delete-color: #ef4444;
+            --header-bg: #1e222d; 
+        }
+
+        .light-mode {
+            --bg-primary: #f0f3fa;
+            --bg-secondary: #ffffff;
+            --text-color: #333333;
+            --border-color: #007bff;
+            --neon-color: #007bff;
+            --accent-color: #007bff;
+            --success-color: #15803d;
+            --delete-color: #b91c1c;
+            --header-bg: #ffffff;
+        }
+
+        /* SCROLLBAR AYARLARI (GÖRÜNÜR) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #434651;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-color); 
+        }
+
+        /* Firefox için */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-color) transparent;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* DÜZELTİLDİ: Ana gövde kayabilir */
+            overflow-y: auto; 
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- HEADER (1PX TURKUAZ ÇERÇEVE) --- */
+        header {
+            background: var(--header-bg);
+            padding: 10px 20px;
+            border: 1px solid var(--neon-color); 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1); 
+            border-radius: 16px;
+            margin: 10px 10px 0 10px;
+            width: calc(100% - 20px);
+            height: 60px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        /* --- ANA YAPI --- */
+        .main-layout {
+            display: flex;
+            gap: 10px; 
+            margin: 10px; 
+            width: calc(100% - 20px);
+            /* DÜZELTİLDİ: Sabit yükseklik kaldırıldı */
+            height: auto; 
+            min-height: calc(100vh - 90px); 
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        /* --- SOL PANEL (SIDEBAR) (1PX TURKUAZ ÇERÇEVE) --- */
+        .sidebar {
+            width: 280px; 
+            background: var(--bg-secondary);
+            border: 1px solid var(--neon-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            /* Sidebar'ın kendi içeriği kayabilir olmalı */
+            overflow-y: auto !important; 
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.05);
+            /* Height'i sabit tuttuk */
+            height: calc(100vh - 110px); 
+        }
+
+        /* --- SAĞ PANEL --- */
+        .dashboard {
+            flex: 1; 
+            background: transparent; 
+            overflow-y: visible; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px; 
+            padding: 2px; 
+        }
+
+        /* --- ANALİZ KISMI (1PX TURKUAZ ÇERÇEVE) --- */
+        #analysis-bar { 
+            display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; 
+            border: 1px solid var(--neon-color); 
+            border-radius: 12px;
+            padding: 15px; 
+            flex-shrink: 0; 
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.05);
+        }
+
+        /* --- WIDGET KARTLARI --- */
+        .widget-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 0; 
+            border: 1px solid var(--border-color); 
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden !important; 
+            flex-shrink: 0;
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+        
+        .widget-content, .tradingview-widget-container { 
+            flex: 1; width: 100% !important; height: 100% !important; 
+            position: relative; overflow: hidden !important; 
+        }
+        iframe {
+            width: 100% !important; height: 100% !important;
+            overflow: hidden !important; pointer-events: all; 
+        }
+
+        /* DİĞER DETAYLAR */
+        .app-logo { display: flex; align-items: center; font-size: 1.5rem; color: var(--text-color); }
+        .logo-icon { width: 35px; height: 35px; border-radius: 50%; background: var(--bg-secondary); border: 2px solid #8c909a; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .logo-icon svg { width: 65%; height: 65%; display: block; }
+        .logo-text { display: flex; align-items: baseline; gap: 5px; line-height: 1; font-size: 1.4rem; color: var(--text-color); }
+        .logo-text span:first-child { font-weight: 900; letter-spacing: 0.5px; }
+        .logo-text span:last-child { font-weight: 300; color: var(--neon-color); font-size: 1rem; } 
+
+        .live-status-badge { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px; height: 24px; padding: 0 15px; border-radius: 12px; background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success-color); color: var(--success-color); font-size: 0.75rem; font-weight: bold; letter-spacing: 1px; white-space: nowrap; box-shadow: 0 0 8px rgba(34, 197, 94, 0.2); transition: all 0.3s ease; }
+        .live-status-badge.online { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success-color); color: var(--success-color); }
+        .live-status-badge.offline { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--delete-color); color: var(--delete-color); }
+        .live-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .live-status-badge.online .live-dot { background-color: var(--success-color); box-shadow: 0 0 6px var(--success-color); animation: pulse-dot 1.5s infinite; }
+        .live-status-badge.offline .live-dot { background-color: var(--delete-color); box-shadow: 0 0 6px var(--delete-color); animation: none; }
+        @keyframes pulse-dot { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        .mode-switch-container { display: flex; align-items: center; gap: 12px; }
+        .mode-switch { width: 40px; height: 20px; background: var(--border-color); border-radius: 10px; position: relative; cursor: pointer; transition: background 0.3s; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .mode-switch.active { background: #4a4d53; }
+        .mode-switch .toggle { width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 1px; left: 1px; transition: left 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .mode-switch.active .toggle { left: 21px; }
+        .mode-switch-container svg { width: 20px; height: 20px; fill: #8c909a; transition: fill 0.3s; }
+        .mode-switch-container .moon.active, .dark-mode .mode-switch-container .moon { fill: var(--accent-color); }
+        .mode-switch-container .sun.active, .light-mode .mode-switch-container .sun { fill: #f39c12; }
+
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        .lang-switch { background: transparent; border: 1px solid var(--border-color); color: #8c909a; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .lang-switch:hover { border-color: var(--neon-color); color: var(--neon-color); }
+        .lang-switch span.active { color: var(--text-color); }
+
+        #tickerInput { width: 100%; box-sizing: border-box; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-color); padding: 12px 15px; border-radius: 8px; font-size: 1rem; outline: none; text-transform: uppercase; font-weight: bold; transition: border-color 0.3s; }
+        #tickerInput:focus { border-color: var(--neon-color); }
+        #tickerInput::placeholder { color: #64748b; opacity: 0.7; font-weight: normal; }
+
+        .btn-analyze { background: var(--accent-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; width: 100%; box-sizing: border-box; }
+        .btn-analyze:hover { background: #1e4bd8; opacity: 0.9; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; flex-shrink: 0; }
+        .btn-group button { flex: 1; background: transparent; color: var(--success-color); border: 1px solid var(--success-color); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-group button:hover { background: rgba(34, 197, 94, 0.1); }
+        
+        .sidebar h3 { color: #8c909a; font-size: 0.8rem; text-transform: uppercase; margin-top: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
+        
+        /* --- LISTE KAPLARI (SCROLL AÇIK VE GÖRÜNÜR) --- */
+        #portfolio-container, #watchlist-container { 
+            max-height: 250px; 
+            overflow-y: auto !important; 
+            margin-bottom: 15px; 
+            padding-right: 5px; 
+        }
+        
+        .watchlist-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-primary); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .watchlist-item:hover { border-color: var(--accent-color); }
+        .watchlist-item.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+        .wl-symbol { font-weight: bold; }
+        .wl-delete { color: var(--delete-color); font-size: 1.2rem; padding: 0 5px; }
+
+        .dashboard-header { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px; } 
+        
+        .widget-card.hud-card { animation: breathe 4s infinite ease-in-out; }
+        @keyframes breathe { 
+            0% { box-shadow: 0 0 5px rgba(0,0,0,0); border-color: var(--border-color); } 
+            50% { box-shadow: 0 0 10px var(--neon-color); border-color: var(--neon-color); } 
+            100% { box-shadow: 0 0 5px rgba(0,0,0,0); border-color: var(--border-color); } 
+        }
+        
+        .widget-card.hud-card::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, transparent 0%, rgba(0, 255, 255, 0.03) 50%, transparent 100%); background-size: 100% 200%; animation: scan 4s linear infinite; pointer-events: none; z-index: 10; }
+        @keyframes scan { 0% { background-position: 0% -100%; } 100% { background-position: 0% 200%; } }
+        
+        .time-buttons-container { 
+            position: relative; 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+            margin-bottom: 10px; 
+            padding: 8px; 
+            border: 1px solid var(--neon-color); 
+            border-radius: 20px; 
+            width: fit-content; 
+            margin-left: auto; 
+            margin-right: auto; 
+            z-index: 20; 
+            background: var(--bg-secondary); 
+            margin-top: 15px; 
+        }
+        .time-buttons-container button { background: transparent; color: #8c909a; border: none; padding: 6px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .time-buttons-container button.active { background: var(--accent-color); color: white; box-shadow: 0 0 10px var(--accent-color); }
+        .time-buttons-container button:hover:not(.active) { color: var(--accent-color); }
+
+        /* --- FİYAT KUTUSU (ORAN: %40 - %60) --- */
+        .price-widget-card { 
+            height: 140px; 
+            padding: 0; 
+            flex-direction: row !important; 
+            align-items: stretch; 
+            margin-top: 0;
+        }
+        
+        #left-price-box {
+            width: 40%; 
+            height: 100%;
+            position: relative;
+            border-right: 1px solid var(--neon-color); 
+        }
+        
+        #right-market-box {
+            width: 60%; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .market-row {
+            width: 100%;
+            height: 50%;
+            position: relative;
+            overflow: hidden;
+        }
+        .market-row:first-child {
+            border-bottom: 1px solid var(--border-color); 
+        }
+
+        /* --- KULLANIM KILAVUZU --- */
+        .usage-section {
+            margin-top: auto; 
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+        
+        .usage-toggle {
+            width: 100%;
+            background: transparent;
+            color: #8c909a;
+            border: none;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .usage-toggle:hover { color: var(--neon-color); background: rgba(0, 255, 255, 0.05); }
+        .usage-toggle svg { width: 16px; height: 16px; transition: transform 0.3s; }
+        .usage-toggle.active svg { transform: rotate(180deg); }
+        
+        .usage-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; font-size: 0.75rem; color: var(--text-color); line-height: 1.4; }
+        
+        .usage-content ul { 
+            list-style: none; padding: 0; margin: 0; padding: 10px; background: var(--bg-primary); border-radius: 6px; border: 1px solid var(--border-color); margin-top: 5px; 
+            max-height: 200px; 
+            overflow-y: auto !important; 
+        }
+        .usage-content li { margin-bottom: 8px; padding-left: 10px; border-left: 2px solid var(--accent-color); }
+        .usage-content li:last-child { margin-bottom: 0; }
+        .usage-content strong { color: var(--neon-color); display: block; margin-bottom: 2px; }
+
+        @media (max-width: 768px) {
+            header { flex-direction: column; padding: 15px; height: auto; margin: 10px; width: calc(100% - 20px); }
+            .live-status-badge { position: relative; left: auto; transform: none; order: 2; margin: 10px 0; }
+            .main-layout { flex-direction: column; height: auto; margin: 10px; width: calc(100% - 20px); }
+            .sidebar { width: 100%; height: auto; max-height: none; padding: 15px; border-radius: 16px; margin-bottom: 10px; box-sizing: border-box; overflow-y: auto; }
+            .time-buttons-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+            .widget-card { height: 450px; }
+            .price-widget-card { height: auto; flex-direction: column !important; }
+            #left-price-box { width: 100%; height: 100px; border-right: none; border-bottom: 1px solid var(--neon-color); }
+            #right-market-box { width: 100%; height: 140px; }
+            .mode-switch-container { order: 3; width: 100%; justify-content: center; }
+            .app-logo { order: 1; }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <header>
+        <div class="app-logo">
+            <div class="logo-icon">
+                 <!-- MUM ÇUBUKLARI -->
+                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="35" y="35" width="12" height="40" fill="#ef4444"/>
+                    <rect x="39" y="25" width="4" height="60" fill="#ef4444"/> 
+                    <rect x="55" y="25" width="12" height="40" fill="#22c55e"/>
+                    <rect x="59" y="15" width="4" height="60" fill="#22c55e"/>
+                </svg>
+            </div>
+            <div class="logo-text"><span>ARFZTRADE</span><span>TECHNICAL SCORE</span></div>
+        </div>
+        
+        <div id="connectionBadge" class="live-status-badge online">
+            <div class="live-dot"></div>
+            <span id="connectionText" data-key="live">CANLI VERİ</span>
+        </div>
+
+        <div class="header-controls">
+            <button class="lang-switch" onclick="toggleLanguage()">
+                <span id="lang-tr" class="active">TR</span> | <span id="lang-en">EN</span>
+            </button>
+            <div class="mode-switch-container">
+                <svg class="moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" fill="currentColor"/></svg>
+                <div class="mode-switch" id="modeSwitch" onclick="toggleDarkMode()"><div class="toggle"></div></div>
+                <svg class="sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42m12.72-12.72l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- SOL PANEL -->
+        <div class="sidebar">
+            <div id="analysis-bar">
+                <input type="text" id="tickerInput" placeholder="SEMBOL">
+                <button class="btn-analyze" onclick="manualAnalyze()" data-key="analyze">ANALİZ ET</button>
+            </div>
+            <div class="btn-group">
+                <button onclick="addToWatchlist('portfolio')" data-key="addToPortfolio">Portföy'e Ekle</button>
+                <button onclick="addToWatchlist('watchlist')" data-key="addToWatchlist">Takip'e Ekle</button>
+            </div>
+            <h3 data-key="portfolio">Portföyüm</h3>
+            <div id="portfolio-container"></div>
+            <h3 data-key="watchlist">Takip Listem</h3>
+            <div id="watchlist-container"></div>
+            
+            <div class="usage-section">
+                <button class="usage-toggle" onclick="toggleUsage()">
+                    <span data-key="guideTitle">KULLANIM VE TEKNİK BİLGİ</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="usage-content" id="usageContent">
+                    <ul id="usageList"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL -->
+        <div class="dashboard">
+            <!-- BÖLÜNMÜŞ FİYAT VE PİYASA KUTUSU -->
+            <div class="widget-card price-widget-card hud-card"> 
+                 <!-- Sol Taraf: Aktif Hisse (%40) -->
+                 <div id="left-price-box">
+                     <div class="tradingview-widget-container" id="price-widget"></div>
+                 </div>
+                 
+                 <!-- Sağ Taraf: Piyasa Panosu (%60) -->
+                 <div id="right-market-box">
+                     <div class="market-row" id="market-row-1"></div>
+                     <div class="market-row" id="market-row-2"></div>
+                 </div>
+            </div>
+
+            <!-- TEKNİK ANALİZ -->
+            <div class="widget-card hud-card" style="height: 480px;"> 
+                <div class="time-buttons-container" id="time-buttons"></div>
+                <div class="widget-content" id="tech-widget"></div>
+            </div>
+            
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px; text-align: center; padding-bottom: 10px;">
+                <span data-key="footer">Bu uygulama tamamen TradingView'in sunucularından gelen Canlı Teknik Analiz verilerini kullanır.</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TRANSLATIONS = {
+            tr: { live: "CANLI VERİ", offline: "BAĞLANTI YOK", analyze: "ANALİZ ET", addToPortfolio: "Portföy'e Ekle", addToWatchlist: "Takip'e Ekle", portfolio: "Portföyüm", watchlist: "Takip Listem", guideTitle: "KULLANIM VE TEKNİK BİLGİ", footer: "Bu uygulama tamamen TradingView'in sunucularından gelen Canlı Teknik Analiz verilerini kullanır.", placeholder: "SEMBOL", alertEmpty: "Lütfen bir hisse kodu girin.", alertExists: "zaten bu listede var.", guideItems: ["<strong>Veri Mimarisi</strong> Kullanıcı verileri, tarayıcının yerel hafızasında (LocalStorage) izole olarak saklanır.", "<strong>Veri Sağlayıcı</strong> Analiz verileri, TradingView™ API altyapısı üzerinden gerçek zamanlı olarak sağlanır.", "<strong>Veri Verimliliği</strong> Veri akışı sadece uygulama aktifken çalışır; arka plan tüketimi engellenmiştir.", "<strong>Algoritmik Skor</strong> Teknik kadran; RSI, MACD ve Hareketli Ortalamalar dahil 26 teknik indikatörün sinyallerini analiz eder.", "<strong>Çoklu Analiz</strong> Kadran, anlık olarak 26 farklı teknik değerlemenin ağırlıklı sonucunu yansıtır."] },
+            en: { live: "LIVE DATA", offline: "NO CONNECTION", analyze: "ANALYZE", addToPortfolio: "Add to Portfolio", addToWatchlist: "Add to Watchlist", portfolio: "My Portfolio", watchlist: "Watchlist", guideTitle: "USAGE AND TECHNICAL INFO", footer: "This application uses Real-Time Technical Analysis data entirely from TradingView servers.", placeholder: "SYMBOL", alertEmpty: "Please enter a ticker symbol.", alertExists: "is already in this list.", guideItems: ["<strong>Data Architecture</strong> User data is stored isolated in the browser's local storage (LocalStorage).", "<strong>Data Provider</strong> Analysis data is provided in real-time via TradingView™ API infrastructure.", "<strong>Data Efficiency</strong> Data flow only works when the application is active; background consumption is prevented.", "<strong>Algorithmic Score</strong> The technical gauge analyzes signals from 26 technical indicators including RSI, MACD, and Moving Averages.", "<strong>Multi-Analysis</strong> The gauge reflects the weighted result of 26 different technical valuations instantly."] }
+        };
+
+        let currentLang = localStorage.getItem('esuLang') || 'tr';
+        let currentTicker = "NVDA";
+        let currentInterval = "1D"; 
+        const INTERVALS = [ { label_tr: "1 Ay", label_en: "1 M", value: "1M" }, { label_tr: "1 Hafta", label_en: "1 W", value: "1W" }, { label_tr: "1 Gün", label_en: "1 D", value: "1D" }, { label_tr: "4 Saat", label_en: "4 h", value: "4h" }, { label_tr: "2 Saat", label_en: "2 h", value: "2h" }, { label_tr: "1 Saat", label_en: "1 h", value: "1h" }, { label_tr: "30 Dk", label_en: "30 m", value: "30m" }, { label_tr: "15 Dk", label_en: "15 m", value: "15m" }, { label_tr: "5 Dk", label_en: "5 m", value: "5m" }, { label_tr: "1 Dk", label_en: "1 m", value: "1m" } ];
+        let portfolio = JSON.parse(localStorage.getItem('esuPortfolio')) || ['AAPL', 'TSLA']; 
+        let watchlist = JSON.parse(localStorage.getItem('esuWatchlist')) || ['NVDA', 'AMD'];
+        let isDarkMode = localStorage.getItem('isDarkMode') !== 'false'; 
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'tr' ? 'en' : 'tr';
+            localStorage.setItem('esuLang', currentLang);
+            updateUIText(); renderIntervalButtons(); loadDashboard(currentTicker, currentInterval); loadMarketOverview();
+        }
+
+        function updateUIText() {
+            const t = TRANSLATIONS[currentLang];
+            document.getElementById('lang-tr').className = currentLang === 'tr' ? 'active' : '';
+            document.getElementById('lang-en').className = currentLang === 'en' ? 'active' : '';
+            document.querySelectorAll('[data-key]').forEach(el => { const key = el.getAttribute('data-key'); if (t[key]) el.innerText = t[key]; });
+            document.getElementById('tickerInput').placeholder = t.placeholder;
+            document.getElementById('usageList').innerHTML = t.guideItems.map(item => `<li>${item}</li>`).join('');
+            if (navigator.onLine) document.getElementById('connectionText').innerText = t.live; else document.getElementById('connectionText').innerText = t.offline;
+        }
+
+        function updateThemeClasses(reloadWidgets = false) {
+            const body = document.body;
+            const toggleSwitch = document.getElementById('modeSwitch');
+            if (isDarkMode) { body.classList.remove('light-mode'); toggleSwitch.classList.remove('active'); document.querySelector('.moon').style.fill = 'var(--accent-color)'; document.querySelector('.sun').style.fill = '#8c909a'; } 
+            else { body.classList.add('light-mode'); toggleSwitch.classList.add('active'); document.querySelector('.moon').style.fill = '#8c909a'; document.querySelector('.sun').style.fill = '#f39c12'; }
+            if (reloadWidgets) { loadDashboard(currentTicker, currentInterval); loadMarketOverview(); }
+        }
+        function toggleDarkMode() { isDarkMode = !isDarkMode; localStorage.setItem('isDarkMode', isDarkMode); updateThemeClasses(true); }
+
+        function updateConnectionStatus() {
+            const badge = document.getElementById('connectionBadge'); const text = document.getElementById('connectionText'); const t = TRANSLATIONS[currentLang];
+            if (navigator.onLine) { badge.classList.remove('offline'); badge.classList.add('online'); text.innerText = t.live; } 
+            else { badge.classList.remove('online'); badge.classList.add('offline'); text.innerText = t.offline; }
+        }
+        window.addEventListener('online', updateConnectionStatus); window.addEventListener('offline', updateConnectionStatus);
+
+        function toggleUsage() {
+            const content = document.getElementById('usageContent'); const btn = document.querySelector('.usage-toggle');
+            btn.classList.toggle('active'); if (content.style.maxHeight) content.style.maxHeight = null; else content.style.maxHeight = content.scrollHeight + "px";
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateThemeClasses(false); updateUIText(); renderLists(); renderIntervalButtons(); updateConnectionStatus();
+            loadDashboard(currentTicker, currentInterval, true); loadMarketOverview(); 
+        });
+        document.getElementById("tickerInput").addEventListener("keypress", function(event) { if (event.key === "Enter") manualAnalyze(); });
+
+        function renderIntervalButtons() {
+            const container = document.getElementById('time-buttons'); container.innerHTML = '';
+            INTERVALS.forEach(interval => {
+                const button = document.createElement('button'); button.innerText = currentLang === 'tr' ? interval.label_tr : interval.label_en;
+                button.value = interval.value; button.className = interval.value === currentInterval ? 'active' : '';
+                button.onclick = () => handleIntervalChange(interval.value); container.appendChild(button);
+            });
+        }
+        function handleIntervalChange(newInterval) {
+            if (newInterval === currentInterval) return; 
+            currentInterval = newInterval;
+            document.querySelectorAll('#time-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`#time-buttons button[value="${newInterval}"]`).classList.add('active');
+            loadDashboard(currentTicker, currentInterval);
+        }
+        
+        function manualAnalyze() {
+            const inputVal = document.getElementById('tickerInput').value.toUpperCase().trim();
+            const t = TRANSLATIONS[currentLang];
+            if(!inputVal) return alert(t.alertEmpty);
+            loadDashboard(inputVal, currentInterval);
+        }
+
+        function loadDashboard(ticker, interval, isInitialLoad = false) {
+            currentTicker = ticker; currentInterval = interval;
+            if (isInitialLoad) document.getElementById('tickerInput').value = "";
+            else document.getElementById('tickerInput').value = ticker;
+            renderIntervalButtons(); renderLists(); loadPriceWidget(ticker); loadTechnicalWidget(ticker, interval); 
+        }
+
+        function addToWatchlist(listType) {
+            const inputVal = document.getElementById('tickerInput').value.toUpperCase().trim();
+            const tickerToAdd = inputVal || currentTicker;
+            const t = TRANSLATIONS[currentLang];
+            if (!tickerToAdd) { alert(t.alertEmpty); return; }
+            const list = listType === 'portfolio' ? portfolio : watchlist;
+            const otherList = listType === 'portfolio' ? watchlist : portfolio;
+            if (otherList.includes(tickerToAdd)) { if (listType === 'portfolio') watchlist = watchlist.filter(t => t !== tickerToAdd); else portfolio = portfolio.filter(t => t !== tickerToAdd); }
+            if (!list.includes(tickerToAdd)) { list.push(tickerToAdd); saveLists(); renderLists(); } else { alert(tickerToAdd + " " + t.alertExists); }
+        }
+        function removeFromList(ticker, listType, event) {
+            event.stopPropagation(); if (listType === 'portfolio') portfolio = portfolio.filter(t => t !== ticker); else watchlist = watchlist.filter(t => t !== ticker);
+            saveLists(); renderLists(); if (ticker === currentTicker) loadDashboard('NVDA', currentInterval);
+        }
+        function saveLists() { localStorage.setItem('esuPortfolio', JSON.stringify(portfolio)); localStorage.setItem('esuWatchlist', JSON.stringify(watchlist)); }
+        function renderLists() {
+            const portContainer = document.getElementById('portfolio-container'); const watchContainer = document.getElementById('watchlist-container');
+            portContainer.innerHTML = ''; watchContainer.innerHTML = '';
+            portfolio.forEach(ticker => portContainer.appendChild(document.createListItem(ticker, 'portfolio', currentInterval)));
+            watchlist.forEach(ticker => watchContainer.appendChild(document.createListItem(ticker, 'watchlist', currentInterval)));
+        }
+        document.createListItem = function(ticker, listType, interval) {
+            const item = document.createElement('div'); item.className = `watchlist-item ${ticker === currentTicker ? 'active' : ''}`;
+            item.onclick = () => loadDashboard(ticker, interval);
+            item.innerHTML = `<span class="wl-symbol">${ticker}</span><span class="wl-delete" onclick="removeFromList('${ticker}', '${listType}', event)">×</span>`;
+            return item;
+        };
+
+        const getThemeColor = () => isDarkMode ? "dark" : "light";
+        const getBgColor = () => isDarkMode ? "#131722" : "#FFFFFF";
+
+        function loadPriceWidget(symbol) {
+            const container = document.getElementById('price-widget'); container.innerHTML = '';
+            const script = document.createElement('script'); 
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js'; 
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                "symbol": symbol, "width": "100%", "height": "100%", "locale": currentLang, 
+                "colorTheme": getThemeColor(), "isTransparent": true
+            });
+            container.appendChild(script);
+        }
+
+        function loadTechnicalWidget(symbol, interval) {
+            const container = document.getElementById('tech-widget'); container.innerHTML = '';
+            const script = document.createElement('script'); script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                "interval": interval, "width": "100%", "isTransparent": true, "height": "100%",
+                "symbol": symbol, "showIntervalTabs": false, "displayMode": "single", "locale": currentLang, "colorTheme": getThemeColor()
+            });
+            container.appendChild(script);
+        }
+
+        function loadMarketOverview() {
+            const row1 = document.getElementById('market-row-1'); row1.innerHTML = '';
+            const script1 = document.createElement('script');
+            script1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+            script1.async = true;
+            script1.innerHTML = JSON.stringify({
+                "symbols": [
+                    { "proName": "FX_IDC:USDTRY", "title": "USD/TRY" }, { "proName": "FX_IDC:EURTRY", "title": "EUR/TRY" },
+                    { "proName": "FX_IDC:USDRUB", "title": "USD/RUB" }, { "proName": "FX_IDC:EURRUB", "title": "EUR/RUB" },
+                    { "proName": "FX:EURUSD", "title": "EUR/USD" }, { "proName": "OANDA:XAUUSD", "title": "Altın" },
+                    { "proName": "OANDA:XAGUSD", "title": "Gümüş" }
+                ],
+                "showSymbolLogo": true, "colorTheme": getThemeColor(), "isTransparent": true, "displayMode": "adaptive", "locale": currentLang
+            });
+            row1.appendChild(script1);
+
+            const row2 = document.getElementById('market-row-2'); row2.innerHTML = '';
+            const script2 = document.createElement('script');
+            script2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+            script2.async = true;
+            script2.innerHTML = JSON.stringify({
+                "symbols": [
+                    { "proName": "BITSTAMP:BTCUSD", "title": "Bitcoin" }, { "proName": "BITSTAMP:ETHUSD", "title": "Ethereum" },
+                    { "proName": "OANDA:SPX500USD", "title": "S&P 500" },
+                    { "proName": "OANDA:NAS100USD", "title": "Nasdaq" },
+                    { "proName": "OANDA:US30USD", "title": "Dow Jones" }
+                ],
+                "showSymbolLogo": true, "colorTheme": getThemeColor(), "isTransparent": true, "displayMode": "adaptive", "locale": currentLang
+            });
+            row2.appendChild(script2);
+        }
+    </script>
+</body>
+</html>
